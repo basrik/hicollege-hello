@@ -1,0 +1,43 @@
+plugins {
+	id 'org.springframework.boot' version '2.1.3.RELEASE'
+	id 'java'
+}
+
+apply plugin: 'io.spring.dependency-management'
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+task prepareForDocker(type: Copy) {
+    dependsOn(build)
+    from 'Dockerfile' into 'build'
+}
+
+task buildLocalImage(type: Exec) {
+	dependsOn(prepareForDocker)
+	commandLine('docker', 'build', './build', '-t', "${project.name}:local")
+}
+
+task pushImage {
+	dependsOn(buildLocalImage)
+	def tag = "hicollege.azurecr.io/${project.name}:${project.version}"
+	doLast {
+		exec {
+			commandLine('docker', 'tag', "${project.name}:local", tag)
+		}
+		exec {
+			commandLine('docker', 'push', tag)
+		}
+	}
+}
